@@ -3,7 +3,7 @@
 
 $schema: ../docs-resources/schemas/defs-schema.json#
 
-chapter_name: Bfloat16
+chapter_name: Bfloat161234
 
 normative_rule_definitions:
 
