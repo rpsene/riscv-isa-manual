@@ -1,6 +1,6 @@
 {
   "tags": {
-    "norm:rv32i_xreg_sz": "For RV32I, the 32 x registers are each 32 bits wide,\ni.e., XLEN=32.",
+    "norm:rv32i_xreg_szabc": "For RV32I, the 32 x registers are each 32 bits wide,\ni.e., XLEN=32.",
     "norm:x0eq0": "Register x0 is hardwired with all bits equal to 0.",
     "norm:rv32i_rv64i_other_xregs": "General purpose registers x1-x31 hold values that various\ninstructions interpret as a collection of Boolean values, or as two's\ncomplement signed binary integers or unsigned binary integers.",
     "norm:pcreg_op": "There is one additional unprivileged register: the program counter pc holds the address of the current instruction.",
