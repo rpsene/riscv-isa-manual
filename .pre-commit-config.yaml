@@ -20,6 +20,12 @@ repos:
         language: fail
         # Disallow other asciidoc extensions except .adoc
         files: .*\.(asciidoc|asc)$
+      - id: normative-tag-check
+        name: normative-tag-check
+        entry: scripts/check-tag-changes.sh
+        language: system
+        pass_filenames: false
+        files: '^(src/|normative_rule_defs/|tagging_normative_rules\.adoc|docs-resources/|ref/)'
 
   - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
     rev: 0.2.3
