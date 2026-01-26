@@ -7,7 +7,7 @@ chapter_name: Bfloat16
 
 normative_rule_definitions:
 
-  - name: fcvt-bf16-s_op
+  - name: fcvt-bf16-s_op123
     tags: ["norm:fcvt-bf16-s_op"]
 
   - name: fcvt-s-bf16_op
