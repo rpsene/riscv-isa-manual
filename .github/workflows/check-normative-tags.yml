@@ -24,7 +24,7 @@ jobs:
     permissions:
       issues: write
       contents: read
-      pull-requests: read
+      pull-requests: write
 
     steps:
       - name: Checkout code
@@ -32,22 +32,22 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.2'
-          bundler-cache: true
+      - name: Build normative tags
+        run: make build-tags
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y $(grep -v '^#' dependencies/apt_packages.txt | grep -v '^$' | tr '\n' ' ')
-
-      - name: Run tag change check
+      - name: Check for tag changes
         id: check
         continue-on-error: true
         run: |
-          bash scripts/check-tag-changes.sh
+          echo "Checking unprivileged tags..."
+          ruby docs-resources/tools/detect_tag_changes.rb \
+            ref/riscv-unprivileged-norm-tags.json \
+            build/riscv-unprivileged-norm-tags.json
+
+          echo "Checking privileged tags..."
+          ruby docs-resources/tools/detect_tag_changes.rb \
+            ref/riscv-privileged-norm-tags.json \
+            build/riscv-privileged-norm-tags.json
 
       - name: Create issue on failure
         if: steps.check.outcome == 'failure'
