@@ -2,13 +2,7 @@ name: Check Normative Tag Changes
 
 on:
   push:
-    branches: [ci-dev]  # For testing
-    paths:
-      - 'src/**'
-      - 'normative_rule_defs/**'
-      - 'ref/**'
-      - 'scripts/check-tag-changes.sh'
-      - '.github/workflows/check-normative-tags.yml'
+    branches: [ci-dev]  # For testing - no path filter for easier testing
   pull_request:
     branches: [main]
     paths:
