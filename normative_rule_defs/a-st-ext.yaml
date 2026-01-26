@@ -7,7 +7,7 @@ $schema: "../docs-resources/schemas/defs-schema.json#"
 
 normative_rule_definitions:
 
-  - name: a_aq_rl_bits
+  - name: a_aq_rl_bits1234
     tags: ["norm:a_aq_rl_bits"]
 
   - name: a_domain_specific_ordering
