@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-      contents: read
+      contents: write
       pull-requests: write
 
     steps:
@@ -36,26 +36,78 @@ jobs:
         id: check
         continue-on-error: true
         run: |
-          echo "Checking unprivileged tags..."
+          set +e  # Don't exit on error, we want to capture the output
+
+          echo "## Normative Tag Change Report" > tag_changes.txt
+          echo "" >> tag_changes.txt
+
+          echo "### Unprivileged Specification" >> tag_changes.txt
+          echo '```' >> tag_changes.txt
           ruby docs-resources/tools/detect_tag_changes.rb \
+            --verbose \
+            ref/riscv-unprivileged-norm-tags.json \
+            build/riscv-unprivileged-norm-tags.json 2>&1 | tee -a tag_changes.txt
+          UNPRIV_EXIT=${PIPESTATUS[0]}
+          echo '```' >> tag_changes.txt
+          echo "" >> tag_changes.txt
+
+          echo "### Privileged Specification" >> tag_changes.txt
+          echo '```' >> tag_changes.txt
+          ruby docs-resources/tools/detect_tag_changes.rb \
+            --verbose \
+            ref/riscv-privileged-norm-tags.json \
+            build/riscv-privileged-norm-tags.json 2>&1 | tee -a tag_changes.txt
+          PRIV_EXIT=${PIPESTATUS[0]}
+          echo '```' >> tag_changes.txt
+
+          # Save output for later steps
+          echo "TAG_CHANGES<<EOF" >> $GITHUB_ENV
+          cat tag_changes.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+          # Exit with failure if either check failed (modifications or deletions detected)
+          if [ $UNPRIV_EXIT -ne 0 ] || [ $PRIV_EXIT -ne 0 ]; then
+            echo "has_breaking_changes=true" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "has_breaking_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+      - name: Update reference files (on push to main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Update reference files with any new tags
+          ruby docs-resources/tools/detect_tag_changes.rb \
+            --update-reference \
             ref/riscv-unprivileged-norm-tags.json \
             build/riscv-unprivileged-norm-tags.json
 
-          echo "Checking privileged tags..."
           ruby docs-resources/tools/detect_tag_changes.rb \
+            --update-reference \
             ref/riscv-privileged-norm-tags.json \
             build/riscv-privileged-norm-tags.json
 
-      - name: Create issue on failure
-        if: steps.check.outcome == 'failure'
+      - name: Commit updated reference files
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add ref/*.json
+          git diff --staged --quiet || git commit -m "Auto-update normative tag reference files"
+          git push
+
+      - name: Create or update issue on failure
+        if: steps.check.outcome == 'failure' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const script = require('./.github/scripts/create-tag-change-issue.js');
-            await script({github, context});
+            const tagChanges = process.env.TAG_CHANGES;
+            await script({github, context, tagChanges});
 
-      - name: Fail the workflow if check failed
+      - name: Fail the workflow if breaking changes detected
         if: steps.check.outcome == 'failure'
         run: |
-          echo "::error::Normative tag check failed. Please review the changes."
+          echo "::error::Normative tag check failed - modifications or deletions detected. Please review the changes."
           exit 1
