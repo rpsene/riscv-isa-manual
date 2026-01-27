@@ -24,6 +24,18 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Check for bypass label
+        id: bypass
+        if: github.event_name == 'pull_request'
+        run: |
+          LABELS='${{ toJson(github.event.pull_request.labels.*.name) }}'
+          if echo "$LABELS" | grep -q "normative-change-approved"; then
+            echo "has_bypass=true" >> $GITHUB_OUTPUT
+            echo "::notice::Bypass label 'normative-change-approved' found - check will report but not fail"
+          else
+            echo "has_bypass=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -42,6 +54,7 @@ jobs:
           echo "" >> tag_changes.txt
 
           echo "### Unprivileged Specification" >> tag_changes.txt
+          echo "" >> tag_changes.txt
           echo '```' >> tag_changes.txt
           ruby docs-resources/tools/detect_tag_changes.rb \
             --verbose \
@@ -52,6 +65,7 @@ jobs:
           echo "" >> tag_changes.txt
 
           echo "### Privileged Specification" >> tag_changes.txt
+          echo "" >> tag_changes.txt
           echo '```' >> tag_changes.txt
           ruby docs-resources/tools/detect_tag_changes.rb \
             --verbose \
@@ -98,7 +112,7 @@ jobs:
           git push
 
       - name: Create or update issue on failure
-        if: steps.check.outcome == 'failure' && github.event_name == 'pull_request'
+        if: steps.check.outcome == 'failure' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass != 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -106,8 +120,18 @@ jobs:
             const tagChanges = process.env.TAG_CHANGES;
             await script({github, context, tagChanges});
 
-      - name: Fail the workflow if breaking changes detected
-        if: steps.check.outcome == 'failure'
+      - name: Report changes (bypass mode)
+        if: steps.check.outcome == 'failure' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./.github/scripts/comment-bypass-mode.js');
+            const tagChanges = process.env.TAG_CHANGES;
+            await script({github, context, tagChanges});
+
+      - name: Fail the workflow if breaking changes detected (unless bypassed)
+        if: steps.check.outcome == 'failure' && steps.bypass.outputs.has_bypass != 'true'
         run: |
           echo "::error::Normative tag check failed - modifications or deletions detected. Please review the changes."
+          echo "::notice::To bypass this check, add the 'normative-change-approved' label to the PR."
           exit 1
