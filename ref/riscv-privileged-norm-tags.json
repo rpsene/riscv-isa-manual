@@ -1,6 +1,6 @@
 {
   "tags": {
-    "norm:always-priv-level": "At any time, a RISC-V hardware thread (hart) is running at some\nprivilege level encoded as a mode in one or more CSRs (control and\nstatus registers).",
+    "norm:always-priv-levelabc": "At any time, a RISC-V hardware thread (hart) is running at some\nprivilege level encoded as a mode in one or more CSRs (control and\nstatus registers).",
     "norm:priv-levels-txt": "Three RISC-V privilege levels are currently defined",
     "norm:priv-levels-tbl": "Level|Encoding|Name|Abbreviation\n===\n0\n1\n2\n3|00\n01\n10\n11|User/Application\nSupervisor\nReserved\nMachine|U\nS\n&#160;\nM\n===",
     "norm:non-priv-exc": "attempts to perform operations not\npermitted by the current privilege mode will cause an exception to be\nraised.",
