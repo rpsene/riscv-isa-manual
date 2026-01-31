@@ -15,6 +15,11 @@ on:
       - 'scripts/check-tag-changes.sh'
   workflow_dispatch:  # Allows manual testing from GitHub UI
 
+env:
+  # Branches that trigger issue creation on push/merge
+  # Add or remove branches as needed (comma-separated)
+  ISSUE_TRIGGER_BRANCHES: 'main,ci-dev'
+
 jobs:
   check-tags:
     runs-on: ubuntu-latest
@@ -56,22 +61,24 @@ jobs:
           echo "### Unprivileged Specification" >> tag_changes.txt
           echo "" >> tag_changes.txt
           echo '```' >> tag_changes.txt
-          ruby docs-resources/tools/detect_tag_changes.rb \
+          UNPRIV_OUTPUT=$(ruby docs-resources/tools/detect_tag_changes.rb \
             --verbose \
             ref/riscv-unprivileged-norm-tags.json \
-            build/riscv-unprivileged-norm-tags.json 2>&1 | tee -a tag_changes.txt
-          UNPRIV_EXIT=${PIPESTATUS[0]}
+            build/riscv-unprivileged-norm-tags.json 2>&1)
+          UNPRIV_EXIT=$?
+          echo "$UNPRIV_OUTPUT" | tee -a tag_changes.txt
           echo '```' >> tag_changes.txt
           echo "" >> tag_changes.txt
 
           echo "### Privileged Specification" >> tag_changes.txt
           echo "" >> tag_changes.txt
           echo '```' >> tag_changes.txt
-          ruby docs-resources/tools/detect_tag_changes.rb \
+          PRIV_OUTPUT=$(ruby docs-resources/tools/detect_tag_changes.rb \
             --verbose \
             ref/riscv-privileged-norm-tags.json \
-            build/riscv-privileged-norm-tags.json 2>&1 | tee -a tag_changes.txt
-          PRIV_EXIT=${PIPESTATUS[0]}
+            build/riscv-privileged-norm-tags.json 2>&1)
+          PRIV_EXIT=$?
+          echo "$PRIV_OUTPUT" | tee -a tag_changes.txt
           echo '```' >> tag_changes.txt
 
           # Save output for later steps
@@ -79,7 +86,18 @@ jobs:
           cat tag_changes.txt >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
 
-          # Exit with failure if either check failed (modifications or deletions detected)
+          # Check if ANY changes were detected (additions, modifications, or deletions)
+          HAS_CHANGES=false
+          if echo "$UNPRIV_OUTPUT" | grep -qE "(Added|Modified|Deleted) [0-9]+ tag"; then
+            HAS_CHANGES=true
+          fi
+          if echo "$PRIV_OUTPUT" | grep -qE "(Added|Modified|Deleted) [0-9]+ tag"; then
+            HAS_CHANGES=true
+          fi
+
+          echo "has_any_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+
+          # Exit with failure only if modifications or deletions detected (breaking changes)
           if [ $UNPRIV_EXIT -ne 0 ] || [ $PRIV_EXIT -ne 0 ]; then
             echo "has_breaking_changes=true" >> $GITHUB_OUTPUT
             exit 1
@@ -88,8 +106,22 @@ jobs:
             exit 0
           fi
 
-      - name: Update reference files (on push to main only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Check if branch triggers issues
+        id: branch-check
+        if: github.event_name == 'push'
+        run: |
+          CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $CURRENT_BRANCH"
+          if echo "${{ env.ISSUE_TRIGGER_BRANCHES }}" | grep -qE "(^|,)${CURRENT_BRANCH}(,|$)"; then
+            echo "is_trigger_branch=true" >> $GITHUB_OUTPUT
+            echo "Branch '$CURRENT_BRANCH' is configured to trigger issues"
+          else
+            echo "is_trigger_branch=false" >> $GITHUB_OUTPUT
+            echo "Branch '$CURRENT_BRANCH' is not configured to trigger issues"
+          fi
+
+      - name: Update reference files (on configured branches only)
+        if: github.event_name == 'push' && steps.branch-check.outputs.is_trigger_branch == 'true'
         run: |
           # Update reference files with any new tags
           ruby docs-resources/tools/detect_tag_changes.rb \
@@ -103,7 +135,7 @@ jobs:
             build/riscv-privileged-norm-tags.json
 
       - name: Commit updated reference files
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && steps.branch-check.outputs.is_trigger_branch == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -111,8 +143,17 @@ jobs:
           git diff --staged --quiet || git commit -m "Auto-update normative tag reference files"
           git push
 
-      - name: Create or update issue on failure
-        if: steps.check.outcome == 'failure' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass != 'true'
+      - name: Comment on PR with detected changes
+        if: steps.check.outputs.has_any_changes == 'true' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./.github/scripts/comment-pr-changes.js');
+            const tagChanges = process.env.TAG_CHANGES;
+            await script({github, context, tagChanges});
+
+      - name: Create issue on merge to configured branches
+        if: steps.check.outputs.has_any_changes == 'true' && github.event_name == 'push' && steps.branch-check.outputs.is_trigger_branch == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -121,7 +162,7 @@ jobs:
             await script({github, context, tagChanges});
 
       - name: Report changes (bypass mode)
-        if: steps.check.outcome == 'failure' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass == 'true'
+        if: steps.check.outputs.has_any_changes == 'true' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -129,9 +170,8 @@ jobs:
             const tagChanges = process.env.TAG_CHANGES;
             await script({github, context, tagChanges});
 
-      - name: Fail the workflow if breaking changes detected (unless bypassed)
-        if: steps.check.outcome == 'failure' && steps.bypass.outputs.has_bypass != 'true'
+      - name: Report normative changes detected
+        if: steps.check.outputs.has_any_changes == 'true'
         run: |
-          echo "::error::Normative tag check failed - modifications or deletions detected. Please review the changes."
-          echo "::notice::To bypass this check, add the 'normative-change-approved' label to the PR."
-          exit 1
+          echo "::warning::Normative tag changes detected (additions, modifications, or deletions)."
+          echo "::notice::Review the PR comments or created issue for details."
