@@ -378,6 +378,7 @@ include::images/wavedrom/int-reg-reg.edn[]
 [#norm:add_op]#ADD performs the addition of _rs1_ and _rs2_.#
 [#norm:sub_op]#SUB performs the subtraction of _rs2_ from _rs1_.#
 [#norm:add_sub_overflow]#Overflows are ignored and the low XLEN bits of results are written to the destination _rd_.#
+[#norm:test_ci_workflow_rule]#This is a test normative rule to verify the CI workflow creates issues for new additions.#
 [#norm:slt_sltu_op]#SLT and SLTU perform signed and unsigned compares respectively, writing 1 to _rd_ if
 _rs1_ < _rs2_, 0 otherwise.#
 Note, SLTU _rd_, _x0_, _rs2_ sets _rd_ to 1 if _rs2_ is not equal to zero,
