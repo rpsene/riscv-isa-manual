@@ -1,3 +1,4 @@
+---
 name: Check Normative Tag Changes
 
 on:
@@ -14,6 +15,11 @@ on:
       - 'ref/**'
       - 'scripts/check-tag-changes.sh'
   workflow_dispatch:  # Allows manual testing from GitHub UI
+
+env:
+  # Branches that trigger issue creation on push/merge
+  # Add or remove branches as needed (comma-separated)
+  ISSUE_TRIGGER_BRANCHES: 'main,ci-dev'
 
 jobs:
   check-tags:
@@ -88,8 +94,22 @@ jobs:
             exit 0
           fi
 
-      - name: Update reference files (on push to main only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Check if branch triggers issues
+        id: branch-check
+        if: github.event_name == 'push'
+        run: |
+          CURRENT_BRANCH="${GITHUB_REF#refs/heads/}"
+          echo "Current branch: $CURRENT_BRANCH"
+          if echo "${{ env.ISSUE_TRIGGER_BRANCHES }}" | grep -qE "(^|,)${CURRENT_BRANCH}(,|$)"; then
+            echo "is_trigger_branch=true" >> $GITHUB_OUTPUT
+            echo "Branch '$CURRENT_BRANCH' is configured to trigger issues"
+          else
+            echo "is_trigger_branch=false" >> $GITHUB_OUTPUT
+            echo "Branch '$CURRENT_BRANCH' is not configured to trigger issues"
+          fi
+
+      - name: Update reference files (on configured branches only)
+        if: github.event_name == 'push' && steps.branch-check.outputs.is_trigger_branch == 'true'
         run: |
           # Update reference files with any new tags
           ruby docs-resources/tools/detect_tag_changes.rb \
@@ -103,7 +123,7 @@ jobs:
             build/riscv-privileged-norm-tags.json
 
       - name: Commit updated reference files
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && steps.branch-check.outputs.is_trigger_branch == 'true'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
@@ -120,8 +140,8 @@ jobs:
             const tagChanges = process.env.TAG_CHANGES;
             await script({github, context, tagChanges});
 
-      - name: Create issue on merge to main
-        if: steps.check.outcome == 'failure' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Create issue on merge to configured branches
+        if: steps.check.outcome == 'failure' && github.event_name == 'push' && steps.branch-check.outputs.is_trigger_branch == 'true'
         uses: actions/github-script@v7
         with:
           script: |
