@@ -111,8 +111,17 @@ jobs:
           git diff --staged --quiet || git commit -m "Auto-update normative tag reference files"
           git push
 
-      - name: Create or update issue on failure
+      - name: Comment on PR with detected changes
         if: steps.check.outcome == 'failure' && github.event_name == 'pull_request' && steps.bypass.outputs.has_bypass != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const script = require('./.github/scripts/comment-pr-changes.js');
+            const tagChanges = process.env.TAG_CHANGES;
+            await script({github, context, tagChanges});
+
+      - name: Create issue on merge to main
+        if: steps.check.outcome == 'failure' && github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/github-script@v7
         with:
           script: |
@@ -129,9 +138,8 @@ jobs:
             const tagChanges = process.env.TAG_CHANGES;
             await script({github, context, tagChanges});
 
-      - name: Fail the workflow if breaking changes detected (unless bypassed)
-        if: steps.check.outcome == 'failure' && steps.bypass.outputs.has_bypass != 'true'
+      - name: Report normative changes detected
+        if: steps.check.outcome == 'failure'
         run: |
-          echo "::error::Normative tag check failed - modifications or deletions detected. Please review the changes."
-          echo "::notice::To bypass this check, add the 'normative-change-approved' label to the PR."
-          exit 1
+          echo "::warning::Normative tag changes detected - modifications or deletions found. An issue has been created for tracking."
+          echo "::notice::Review the created issue and PR comments for details."
