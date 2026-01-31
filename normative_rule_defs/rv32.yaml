@@ -24,6 +24,9 @@ normative_rule_definitions:
   - name: x0eq0
     summary: Register x0 always zero
     tags: ["norm:x0eq0"]
+  - name: test_ci_workflow_rule
+    summary: Test rule for CI workflow verification
+    tags: ["norm:test_ci_workflow_rule"]
   - name: taken_cti_misaligned_exc
     summary: CTI misaligned execution
     tags: ["norm:taken_cti_misaligned_exc"]
