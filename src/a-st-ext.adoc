@@ -50,6 +50,8 @@ and cannot be observed to happen before any earlier memory operations or
 after any later memory operations in the same RISC-V hart and to the
 same address domain.#
 
+[#norm:a_no_aq_rlABC]#ABC#
+
 [[sec:lrsc]]
 === "Zalrsc" Extension for Load-Reserved/Store-Conditional Instructions
 

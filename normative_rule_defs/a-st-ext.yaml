@@ -10,6 +10,9 @@ normative_rule_definitions:
   - name: a_aq_rl_bits
     tags: ["norm:a_aq_rl_bits"]
 
+  - name: a_no_aq_rlABC
+    tags: ["norm:a_no_aq_rlABC"]
+
   - name: a_domain_specific_ordering
     tags: ["norm:a_domain_specific_ordering"]
 
