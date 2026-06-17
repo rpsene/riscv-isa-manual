@@ -30,9 +30,6 @@ normative_rule_definitions:
   - name: cond_br_no_ia_misaligned_exc_not_taken
     summary: No IA misaligned exc on not taken
     tags: ["norm:cond_br_no_ia_misaligned_exc_not_taken"]
-  - name: imm_always_sex
-    summary: Immediates always sign-extended
-    tags: ["norm:imm_always_sex"]
   - name: addi_op
     tags: ["norm:addi_op"]
   - name: addi_overflow
@@ -96,8 +93,11 @@ normative_rule_definitions:
     tags: ["norm:branch_misaligned_c_no_exception"]
   - name: load_exc_x0
     tags: ["norm:load_exc_x0"]
-  - name: ENDIANNESS_LITTLE_OR_BIG
-    tags: ["norm:ENDIANNESS_LITTLE_OR_BIG"]
+  - name: ENDIANNESS
+    tags: ["norm:ENDIANNESS"]
+    impl-def-behavior: true
+    kind: base
+    instance: Any
   - name: ldst_endian_byte_invariant
     tags: ["norm:ldst_endian_byte_invariant"]
   - name: ldst_endian_byte_op
@@ -131,19 +131,25 @@ normative_rule_definitions:
   - names: [sw_op, sh_op, sb_op]
     tags: ["norm:sw_sh_sb_op"]
   - name: MISALIGNED_LDST_EEI_DEPENDENT_BEHAVIOR
-    tags: ["norm:MISALIGNED_LDST_EEI_DEPENDENT_BEHAVIOR"]
-  - name: MISALIGNED_LDST_FULLY_HW_SUPPORTED
-    tags: ["norm:MISALIGNED_LDST_FULLY_HW_SUPPORTED"]
-  - name: MISALIGNED_LDST_INVISIBLE_TRAP
-    tags: ["norm:MISALIGNED_LDST_INVISIBLE_TRAP"]
-  - name: MISALIGNED_LDST_HW_OR_INVISIBLE_TRAP_FUNC_OF_ADDR
-    tags: ["norm:MISALIGNED_LDST_HW_OR_INVISIBLE_TRAP_FUNC_OF_ADDR"]
-  - name: MISALIGNED_LDST_FULLY_HW_SUPPORTED_OR_VISIBLE_TRAP
-    tags: ["norm:MISALIGNED_LDST_FULLY_HW_SUPPORTED_OR_VISIBLE_TRAP"]
+    tags: ["norm:misaligned_ldst_eei_dependent_behavior"]
+    impl-def-behavior: true
+    kind: base
+    instance: RV32I
+  - name: MISALIGNED_LDST_HW_SUPPORT
+    tags: ["norm:misaligned_ldst_hw_support"]
+    impl-def-behavior: true
+    kind: base
+    instance: RV32I
+  - name: MISALIGNED_LDST_EXC_TYPE
+    tags: ["norm:misaligned_ldst_exc_type"]
+    impl-def-behavior: true
+    kind: base
+    instance: RV32I
   - name: MISALIGNED_LDST_CONTAINED_OR_FATAL_TRAP
-    tags: ["norm:MISALIGNED_LDST_CONTAINED_OR_FATAL_TRAP"]
-  - name: ldst_addr_misaligned_or_access_fault_exc
-    tags: ["norm:ldst_addr_misaligned_or_access_fault_exc"]
+    tags: ["norm:misaligned_ldst_contained_or_fatal_trap"]
+    impl-def-behavior: true
+    kind: base
+    instance: RV32I
   - name: ldst_atomicity_for_aligned
     tags: ["norm:ldst_atomicity_for_aligned"]
   - name: fence_op
