@@ -25,6 +25,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # SPEEDUP: run the whole job inside the prebuilt docs container so GitHub
+    # fetches the image once for the job (no per-target `docker run` startup,
+    # no nested pull). SKIP_DOCKER=true makes the Makefile call asciidoctor
+    # directly instead of spawning a container per build target.
+    container:
+      image: ghcr.io/riscv/riscv-docs-base-container-image:latest
+    env:
+      SKIP_DOCKER: "true"
 
     steps:
     # Checkout the repository
