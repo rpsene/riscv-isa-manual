@@ -44,7 +44,7 @@ jobs:
     # Build PDF and HTML ISA manual versions and normative rule files using the container
       - name: Build Files
         id: build_files
-        run: make -j$(nproc)
+        run: make -j$(nproc) build-pdf build-html   # SPEEDUP: PR/dispatch builds only PDF+HTML; skips the competing norm-tags/norm-rules + EPUB renders
 
     # Upload the riscv-spec PDF file
       - name: Upload riscv-spec.pdf
